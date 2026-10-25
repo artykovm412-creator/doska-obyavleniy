@@ -1,120 +1,48 @@
-import { useMemo, useState } from "react";
-import AdCard, { type Ad } from "./components/AdCard";
+
+import { useState } from "react";
+import type { FormEvent } from "react";
 import "./App.css";
 
-const initialAds: Ad[] = [
-  {
-    id: 1,
-    title: "Уютная квартира в центре",
-    description: "Светлая квартира с ремонтом. Рядом магазины и остановка.",
-    price: 25000,
-    category: "Недвижимость",
-    location: "Бишкек",
-    date: "Сегодня",
-    emoji: "🏡",
-  },
-  {
-    id: 2,
-    title: "Ноутбук для учёбы",
-    description: "Хороший ноутбук для учёбы и повседневных задач.",
-    price: 30000,
-    category: "Электроника",
-    location: "Бишкек",
-    date: "Сегодня",
-    emoji: "💻",
-  },
-  {
-    id: 3,
-    title: "Велосипед в хорошем состоянии",
-    description: "Удобный велосипед для прогулок по городу.",
-    price: 8500,
-    category: "Транспорт",
-    location: "Ош",
-    date: "Вчера",
-    emoji: "🚲",
-  },
-  {
-    id: 4,
-    title: "Рабочий стол",
-    description: "Компактный стол для дома или студенческой комнаты.",
-    price: 4500,
-    category: "Дом и мебель",
-    location: "Бишкек",
-    date: "Вчера",
-    emoji: "🪑",
-  },
-  {
-    id: 5,
-    title: "Книги для студентов",
-    description: "Учебные книги в хорошем состоянии.",
-    price: 1200,
-    category: "Учёба",
-    location: "Ош",
-    date: "Сегодня",
-    emoji: "📚",
-  },
-  {
-    id: 6,
-    title: "Наушники",
-    description: "Наушники для музыки, занятий и просмотра видео.",
-    price: 1800,
-    category: "Электроника",
-    location: "Бишкек",
-    date: "Вчера",
-    emoji: "🎧",
-  },
-];
-
-const categories = [
-  "Все объявления",
-  "Недвижимость",
-  "Электроника",
-  "Транспорт",
-  "Дом и мебель",
-  "Учёба",
-  "Другое",
-];
+type Ad = {
+  id: number;
+  title: string;
+  description: string;
+  price: number;
+  city: string;
+  category: string;
+  image: string;
+};
 
 function App() {
   const [ads, setAds] = useState<Ad[]>(() => {
     try {
-      const saved = localStorage.getItem("lavanda-ads");
-      return saved ? JSON.parse(saved) as Ad[] : initialAds;
+      const saved = localStorage.getItem("my-ads");
+      return saved ? (JSON.parse(saved) as Ad[]) : [];
     } catch {
-      return initialAds;
+      return [];
     }
   });
 
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("Все объявления");
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [location, setLocation] = useState("Бишкек");
-  const [newCategory, setNewCategory] = useState("Электроника");
+  const [city, setCity] = useState("");
+  const [category, setCategory] = useState("");
+  const [image, setImage] = useState("");
 
-  const filteredAds = useMemo(() => {
-    return ads.filter((ad) => {
-      const matchesSearch =
-        `${ad.title} ${ad.description} ${ad.location}`
-          .toLowerCase()
-          .includes(search.toLowerCase());
-
-      const matchesCategory =
-        category === "Все объявления" || ad.category === category;
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [ads, search, category]);
-
-  function saveAds(updatedAds: Ad[]) {
-    setAds(updatedAds);
-    localStorage.setItem("lavanda-ads", JSON.stringify(updatedAds));
+  function saveAds(newAds: Ad[]) {
+    try {
+      localStorage.setItem("my-ads", JSON.stringify(newAds));
+      setAds(newAds);
+    } catch {
+      alert("Не удалось сохранить данные. Попробуй фотографию поменьше.");
+    }
   }
 
-  function addAd(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const numericPrice = Number(price);
@@ -122,32 +50,23 @@ function App() {
     if (
       !title.trim() ||
       !description.trim() ||
-      price.trim() === "" ||
+      !city.trim() ||
+      !category.trim() ||
       !Number.isFinite(numericPrice) ||
-      numericPrice < 0
+      numericPrice <= 0
     ) {
-      alert("Заполни все поля и укажи правильную цену.");
+      alert("Заполни все поля и укажи цену больше нуля.");
       return;
     }
-
-    const emojis: Record<string, string> = {
-      Недвижимость: "🏡",
-      Электроника: "💻",
-      Транспорт: "🚲",
-      "Дом и мебель": "🪑",
-      Учёба: "📚",
-      Другое: "📦",
-    };
 
     const newAd: Ad = {
       id: Date.now(),
       title: title.trim(),
       description: description.trim(),
       price: numericPrice,
-      category: newCategory,
-      location,
-      date: "Только что",
-      emoji: emojis[newCategory] || "📦",
+      city: city.trim(),
+      category: category.trim(),
+      image,
     };
 
     saveAds([newAd, ...ads]);
@@ -155,302 +74,235 @@ function App() {
     setTitle("");
     setDescription("");
     setPrice("");
+    setCity("");
+    setCategory("");
+    setImage("");
     setShowForm(false);
   }
 
+  function handleImage(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Выбери файл изображения.");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Размер фотографии должен быть меньше 2 МБ.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setImage(reader.result);
+      }
+    };
+
+    reader.readAsDataURL(file);
+  }
+
   function deleteAd(id: number) {
-    if (confirm("Удалить это объявление?")) {
+    const confirmed = window.confirm("Удалить это объявление?");
+
+    if (confirmed) {
       saveAds(ads.filter((ad) => ad.id !== id));
     }
   }
 
+  const filteredAds = ads.filter((ad) => {
+    const text =
+      `${ad.title} ${ad.description} ${ad.city} ${ad.category}`;
+
+    return text.toLowerCase().includes(search.toLowerCase());
+  });
+
   return (
-    <div className="site">
+    <div className="app">
       <header className="header">
-        <a className="logo" href="#home">
-          <span className="logo-icon">Л</span>
-          <span>Лаванда<span className="logo-dot">.</span></span>
-        </a>
+        <div className="header-inner">
+          <h2>Доска объявлений</h2>
 
-        <nav className="navigation">
-          <a href="#home">Главная</a>
-          <a href="#ads">Объявления</a>
-          <a href="#about">О проекте</a>
-        </nav>
-
-        <button
-          className="primary-button header-button"
-          onClick={() => setShowForm(true)}
-        >
-          + Подать объявление
-        </button>
+          <button
+            type="button"
+            className="add-button"
+            onClick={() => setShowForm(true)}
+          >
+            + Добавить объявление
+          </button>
+        </div>
       </header>
 
-      <main id="home">
+      <main className="main">
         <section className="hero">
-          <div className="hero-content">
-            <span className="eyebrow">ТВОЙ ГОРОД · ТВОИ ВОЗМОЖНОСТИ</span>
+          <h1>Доска объявлений</h1>
+          <p>Размещай свои объявления и находи нужные вещи.</p>
 
-            <h1>
-              Найди своё.
-              <br />
-              <span>Поделись своим.</span>
-            </h1>
-
-            <p>
-              Удобная доска объявлений, где легко найти нужное
-              и разместить то, что больше не нужно.
-            </p>
-
-            <button
-              className="primary-button hero-button"
-              onClick={() =>
-                document.getElementById("ads")?.scrollIntoView({
-                  behavior: "smooth",
-                })
-              }
-            >
-              Смотреть объявления <span>→</span>
-            </button>
-
-            <div className="hero-stats">
-              <div>
-                <strong>{ads.length}+</strong>
-                <span>объявлений</span>
-              </div>
-              <div>
-                <strong>2</strong>
-                <span>города</span>
-              </div>
-              <div>
-                <strong>24/7</strong>
-                <span>онлайн</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="hero-art" aria-label="Иллюстрация покупок">
-            <div className="art-circle"></div>
-            <div className="art-card art-card-top">
-              <span>🌷</span>
-              <div>
-                <strong>Новые возможности</strong>
-                <small>Начни сегодня</small>
-              </div>
-            </div>
-            <div className="art-emoji">🛍️</div>
-            <div className="art-card art-card-bottom">
-              <span>✨</span>
-              <div>
-                <strong>Всё рядом</strong>
-                <small>Найди то, что нужно</small>
-              </div>
-            </div>
-          </div>
+          <input
+            className="search-input"
+            type="search"
+            placeholder="Поиск объявлений..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
         </section>
 
-        <section className="benefits" id="about">
-          <div>
-            <span className="benefit-icon">🔎</span>
-            <div>
-              <strong>Легко найти</strong>
-              <p>Удобный поиск по объявлениям</p>
-            </div>
-          </div>
-          <div>
-            <span className="benefit-icon">💜</span>
-            <div>
-              <strong>Просто разместить</strong>
-              <p>Добавляй собственные объявления</p>
-            </div>
-          </div>
-          <div>
-            <span className="benefit-icon">📍</span>
-            <div>
-              <strong>Рядом с тобой</strong>
-              <p>Объявления из твоего города</p>
-            </div>
-          </div>
-        </section>
+        <section className="catalog">
+          <h2>Объявления ({ads.length})</h2>
 
-        <section className="listings" id="ads">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">ВЫБИРАЙ И НАХОДИ</span>
-              <h2>Свежие объявления<span>.</span></h2>
-              <p>Возможно, именно здесь есть то, что ты ищешь.</p>
-            </div>
-
-            <button
-              className="outline-button"
-              onClick={() => setShowForm(true)}
-            >
-              + Разместить своё
-            </button>
-          </div>
-
-          <div className="search-box">
-            <span>⌕</span>
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Что будем искать?"
-              aria-label="Поиск объявлений"
-            />
-            {search && (
-              <button onClick={() => setSearch("")} aria-label="Очистить поиск">
-                ×
-              </button>
-            )}
-          </div>
-
-          <div className="category-list">
-            {categories.map((item) => (
-              <button
-                key={item}
-                className={category === item ? "category active" : "category"}
-                onClick={() => setCategory(item)}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-
-          <div className="ads-grid">
-            {filteredAds.map((ad) => (
-              <div className="ad-wrapper" key={ad.id}>
-                <AdCard ad={ad} />
-                <button
-                  className="delete-button"
-                  onClick={() => deleteAd(ad.id)}
-                >
-                  Удалить объявление
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {filteredAds.length === 0 && (
+          {filteredAds.length === 0 ? (
             <div className="empty-state">
-              <span>🌱</span>
-              <h3>Пока ничего не найдено</h3>
-              <p>Попробуй изменить запрос или выбрать другую категорию.</p>
+              <h3>
+                {ads.length === 0
+                  ? "Объявлений пока нет"
+                  : "Ничего не найдено"}
+              </h3>
+
+              <p>
+                {ads.length === 0
+                  ? "Нажми «Добавить объявление», чтобы создать первое."
+                  : "Попробуй изменить поисковый запрос."}
+              </p>
+            </div>
+          ) : (
+            <div className="ads-grid">
+              {filteredAds.map((ad) => (
+                <article className="ad-card" key={ad.id}>
+                  {ad.image && (
+                    <img
+                      className="ad-photo"
+                      src={ad.image}
+                      alt={ad.title}
+                    />
+                  )}
+
+                  <div className="ad-content">
+                    <p className="ad-category">{ad.category}</p>
+                    <h3>{ad.title}</h3>
+                    <p>{ad.description}</p>
+                    <p>Город: {ad.city}</p>
+                    <strong>{ad.price.toLocaleString("ru-RU")} сом</strong>
+
+                    <button
+                      type="button"
+                      className="delete-button"
+                      onClick={() => deleteAd(ad.id)}
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
-
-          <div className="add-banner">
-            <div>
-              <span>💜</span>
-              <h3>Есть что предложить?</h3>
-              <p>Размести объявление и найди своего покупателя.</p>
-            </div>
-            <button
-              className="primary-button"
-              onClick={() => setShowForm(true)}
-            >
-              Подать объявление →
-            </button>
-          </div>
         </section>
       </main>
 
-      <footer className="footer">
-        <a className="logo" href="#home">
-          <span className="logo-icon">Л</span>
-          <span>Лаванда<span className="logo-dot">.</span></span>
-        </a>
-        <p>Находи нужное. Делись важным.</p>
-        <span>Учебный проект · 2026</span>
-      </footer>
-
       {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
+        <div
+          className="modal-overlay"
+          onClick={() => setShowForm(false)}
+        >
           <div
             className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="form-title"
             onClick={(event) => event.stopPropagation()}
           >
-            <button
-              className="modal-close"
-              onClick={() => setShowForm(false)}
-              aria-label="Закрыть"
-            >
-              ×
-            </button>
+            <div className="modal-heading">
+              <h2>Новое объявление</h2>
 
-            <span className="eyebrow">ТВОЁ ОБЪЯВЛЕНИЕ</span>
-            <h2 id="form-title">Подать объявление</h2>
-            <p>Расскажи, что ты предлагаешь.</p>
+              <button
+                type="button"
+                className="close-button"
+                onClick={() => setShowForm(false)}
+              >
+                ×
+              </button>
+            </div>
 
-            <form onSubmit={addAd}>
-              <label>
-                Название
-                <input
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  placeholder="Например, велосипед"
-                  required
-                />
-              </label>
+            <form onSubmit={handleSubmit}>
+              <label htmlFor="title">Название</label>
+              <input
+                id="title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Введите название"
+                required
+              />
 
-              <label>
-                Описание
-                <textarea
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Расскажи подробнее..."
-                  required
-                />
-              </label>
+              <label htmlFor="description">Описание</label>
+              <textarea
+                id="description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Введите описание"
+                required
+              />
 
-              <label>
-                Цена в сомах
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={price}
-                  onChange={(event) => setPrice(event.target.value)}
-                  placeholder="5000"
-                  required
-                />
-              </label>
+              <label htmlFor="price">Цена в сомах</label>
+              <input
+                id="price"
+                type="number"
+                min="1"
+                value={price}
+                onChange={(event) => setPrice(event.target.value)}
+                placeholder="Введите цену"
+                required
+              />
 
-              <label>
-                Категория
-                <select
-                  value={newCategory}
-                  onChange={(event) => setNewCategory(event.target.value)}
-                >
-                  {categories
-                    .filter((item) => item !== "Все объявления")
-                    .map((item) => (
-                      <option key={item}>{item}</option>
-                    ))}
-                </select>
-              </label>
+              <label htmlFor="city">Город</label>
+              <input
+                id="city"
+                value={city}
+                onChange={(event) => setCity(event.target.value)}
+                placeholder="Введите город"
+                required
+              />
 
-              <label>
-                Город
-                <select
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                >
-                  <option>Бишкек</option>
-                  <option>Ош</option>
-                  <option>Другой город</option>
-                </select>
-              </label>
+              <label htmlFor="category">Категория</label>
+              <input
+                id="category"
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+                placeholder="Введите категорию"
+                required
+              />
 
-              <button className="primary-button submit-button" type="submit">
-                Опубликовать объявление
+              <label htmlFor="image">Фотография (необязательно)</label>
+              <input
+                id="image"
+                type="file"
+                accept="image/*"
+                onChange={handleImage}
+              />
+
+              {image && (
+                <div className="image-preview">
+                  <img src={image} alt="Предпросмотр" />
+
+                  <button
+                    type="button"
+                    onClick={() => setImage("")}
+                  >
+                    Убрать фото
+                  </button>
+                </div>
+              )}
+
+              <button className="submit-button" type="submit">
+                Опубликовать
               </button>
             </form>
           </div>
         </div>
       )}
+
+      <footer className="footer">
+        <p>Доска объявлений</p>
+      </footer>
     </div>
   );
 }
